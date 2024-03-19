@@ -1,3 +1,10 @@
+from urllib.parse import urlparse, parse_qs
+from datetime import datetime
+import time
+import utils
+import logging
+import json
+
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
@@ -5,15 +12,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-from urllib.parse import urlparse, parse_qs
-from datetime import datetime
-
-import time
-import utils
-import logging
-import json
+# custom modules
+from settings import MindBodyCredentials, BookingsWebsite
 
 
+# initialise logger
 logger = logging.getLogger(__name__)
 
 logging.basicConfig(
@@ -23,17 +26,21 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-# custom modules
-from settings import MindBodyCredentials, BookingsWebsite
-
 
 def get_avail_bookings(url):
-    """Return a list of all the available bookings from the `url`"""
+    """
+    Return a list of all the available bookings from the `url`
+    
+    Args:
+    url (string): The url of the website listing the available bookings.
+    """
 
+    # initialise webdriver
     options = Options()
     options.add_argument("--headless")
     driver = webdriver.Firefox(options=options)
 
+    # open page
     driver.get(url)
 
     # wait for a button to appear
@@ -73,8 +80,13 @@ def get_avail_bookings(url):
 
 
 def book(avail_bookings, wishlist):
-    """Loops through `avail_bookings`.
+    """
+    Loops through `avail_bookings`.
     For the ones that are in the `wishlist`, send a booking request
+    
+    Args:
+    avail_bookings (list): List of dictionaries representing the available timeslots/appointments that can be booked.
+    wishlist (list):       List of timeslots wanting to book
     """
 
     for appt in avail_bookings:
@@ -84,15 +96,20 @@ def book(avail_bookings, wishlist):
 
 
 def send_booking_request(appt):
-    """Make the booking for the given booking `url`"""
+    """
+    Make the booking using the booking url in `appt`
+    
+    Args:
+    appt (dict): Contains details of the "appointment" to book.
+                 Keys are `url`, `datetime`, and `text`.
+    """
 
-    user = MindBodyCredentials.USER
-    pwd = MindBodyCredentials.PWD
-
+    # initialise webdriver
     options = Options()
     options.add_argument("--headless")
     driver = webdriver.Firefox(options=options)
 
+    # Open page
     driver.get(appt["url"])
 
     # click next
@@ -104,7 +121,7 @@ def send_booking_request(appt):
     )
     element.click()
 
-    # login
+    # login with credentials
     try:
         user_field = wait.until(
             EC.visibility_of_element_located((By.XPATH, "//input[@id='username']"))
@@ -114,9 +131,9 @@ def send_booking_request(appt):
         )
 
         time.sleep(1)
-        user_field.send_keys(user)
+        user_field.send_keys(MindBodyCredentials.USER)
         time.sleep(1)
-        pwd_field.send_keys(pwd)
+        pwd_field.send_keys(MindBodyCredentials.PWD)
         time.sleep(1)
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
 
@@ -133,13 +150,14 @@ def send_booking_request(appt):
         utils.update_record(appt["datetime"], "booked")
 
     except TimeoutException:
+        # check if you already had the booking
         banner = driver.find_elements(By.XPATH, "//div[@class='c-banner__title']")
         if banner:
             logger.warning(f"Couldn't book ☹️: Message from site banner - {banner[0].text}")
-            if "already in waitlist" in banner[0].text:
+            if "already in waitlist" in banner[0].text:    # TODO handle error msg if already booked into class
                 utils.update_record(appt["datetime"], "booked")
         else:
-            logger.warning(f"Coulldn't book ☹️: {type(e).__name__} - {e}")
+            logger.warning(f"Couldn't book ☹️: {type(e).__name__} - {e}")
             
     except Exception as e:
         logger.error(f"Error occured ☹️: {type(e).__name__} - {e}")
