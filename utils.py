@@ -2,7 +2,9 @@ from datetime import datetime,  timedelta, date, time
 from tempfile import NamedTemporaryFile
 import shutil
 import csv
+import logging
 
+logger = logging.getLogger(__name__)
 
 def convert_booking_date_str(str_date):
     dt = datetime.strptime(str_date, "%a. %b %d, %Y %I:%M %p")
@@ -20,6 +22,8 @@ def read_csv(csv_file="bookings.csv"):
 def get_wishlist(days_in_advance=2):
     bookings = read_csv()
     date_filter = datetime.combine(date.today() + timedelta(days=days_in_advance+1), time())
+
+    logger.info(f"Getting wishlist items within 2 days: ie. < {date_filter}")
     
     return [
         b.get("datetime")
