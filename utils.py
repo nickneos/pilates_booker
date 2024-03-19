@@ -4,7 +4,9 @@ import shutil
 import csv
 import logging
 
+# initialise logging
 logger = logging.getLogger(__name__)
+
 
 def convert_booking_date_str(str_date):
     dt = datetime.strptime(str_date, "%a. %b %d, %Y %I:%M %p")
@@ -49,7 +51,8 @@ def update_record(dt_str, status, csv_file="bookings.csv"):
             writer.writerow(row)
 
     shutil.move(tempfile.name, csv_file)
+    logger.info(f"updated record in {csv_file}: {dt_str} -> '{status}'")
 
 
-if __name__ == "__main__":
-    print(get_wishlist())
+# if __name__ == "__main__":
+#     print(get_wishlist())
