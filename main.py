@@ -168,6 +168,7 @@ def configure_logger():
 
 
 if __name__ == "__main__":
+    configure_logger()
     
     if wishlist := utils.get_wishlist():
         logger.info(f"Wishlist: {wishlist}")
