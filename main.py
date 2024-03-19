@@ -1,7 +1,6 @@
 from urllib.parse import urlparse, parse_qs
 from datetime import datetime
 import time
-import utils
 import logging
 import json
 
@@ -11,12 +10,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-
-# custom modules
 from settings import MindBodyCredentials, BookingsWebsite
+
+# my modules
+import utils
 
 # initialise logger
 logger = logging.getLogger(__name__)
+
 
 def get_avail_bookings(url):
     """
