@@ -15,17 +15,8 @@ from selenium.common.exceptions import TimeoutException
 # custom modules
 from settings import MindBodyCredentials, BookingsWebsite
 
-
 # initialise logger
 logger = logging.getLogger(__name__)
-
-logging.basicConfig(
-    filename="pilates_booker.log",
-    format="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.INFO,
-)
-
 
 def get_avail_bookings(url):
     """
@@ -166,8 +157,18 @@ def send_booking_request(appt):
     driver.close()
 
 
-if __name__ == "__main__":
+def configure_logger():
+    """Setup the logger"""
+    logging.basicConfig(
+        filename="pilates_booker.log",
+        format="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=logging.INFO,
+    )
 
+
+if __name__ == "__main__":
+    
     if wishlist := utils.get_wishlist():
         logger.info(f"Wishlist: {wishlist}")
 
