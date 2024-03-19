@@ -9,7 +9,19 @@ from urllib.parse import urlparse, parse_qs
 from datetime import datetime
 
 import time
-import helpers
+import utils
+import logging
+import json
+
+
+logger = logging.getLogger(__name__)
+
+logging.basicConfig(
+    filename="pilates_booker.log",
+    format="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO,
+)
 
 # custom modules
 from settings import MindBodyCredentials, BookingsWebsite
@@ -19,23 +31,23 @@ def get_avail_bookings(url):
     """Return a list of all the available bookings from the `url`"""
 
     options = Options()
-    # options.add_argument('--headless')
+    options.add_argument("--headless")
     driver = webdriver.Firefox(options=options)
-    # driver = webdriver.Firefox()
 
     driver.get(url)
 
     # wait for a button to appear
     try:
-        wait = WebDriverWait(driver, 30)
-        wait.until(
+        WebDriverWait(driver, 30).until(
             EC.visibility_of_element_located(
                 (By.XPATH, "//button[@class='bw-widget__signup-now bw-widget__cta']")
             )
         )
-    except TimeoutException:
-        return
-    # wait a bit more
+    except Exception as e:
+        logger.error(f"Error occured ☹️: {type(e).__name__} - {e}")
+
+
+    # wait a bit longer
     time.sleep(2)
 
     # get all buttons
@@ -51,8 +63,7 @@ def get_avail_bookings(url):
         book_url = btn.get_attribute("data-url")
         parsed_url = urlparse(book_url)
         qs = parse_qs(parsed_url.query)
-        dt = helpers.extract_datetime(qs["item[info]"][0])
-        # print(f"{dt} [{btn.text}]")
+        dt = utils.convert_booking_date_str(qs["item[info]"][0])
         bookings.append({"url": book_url, "datetime": dt, "text": btn.text})
 
     # close the browser
@@ -68,22 +79,21 @@ def book(avail_bookings, wishlist):
 
     for appt in avail_bookings:
         if appt["datetime"] in wishlist:
-            print(f"Found [{appt['text']}] for {appt['datetime']}")
-            send_booking_request(appt["url"])
+            logger.info(f"Found [{appt['text']}] for {appt['datetime']}")
+            send_booking_request(appt)
 
 
-def send_booking_request(url):
+def send_booking_request(appt):
     """Make the booking for the given booking `url`"""
 
     user = MindBodyCredentials.USER
     pwd = MindBodyCredentials.PWD
 
     options = Options()
-    # options.add_argument('--headless')
+    options.add_argument("--headless")
     driver = webdriver.Firefox(options=options)
-    # driver = webdriver.Firefox()
 
-    driver.get(url)
+    driver.get(appt["url"])
 
     # click next
     wait = WebDriverWait(driver, 10)
@@ -114,30 +124,38 @@ def send_booking_request(url):
         # probably already logged in?
         pass
 
-    # wait for green tick
+    # wait for green tick (hopefully)
     try:
-        wait = WebDriverWait(driver, 10)
-        element = wait.until(
-            EC.presence_of_element_located(
-                (By.XPATH, "//div[@class='thank thank-booking-complete']")
-            )
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, "//div[@class='thank thank-booking-complete']"))
         )
-        print("Booked!")
-    except:
-        print("couldnt book")
+        logger.info("Booked! 🙂")
+        utils.update_record(appt["datetime"], "booked")
+
+    except TimeoutException:
+        banner = driver.find_elements(By.XPATH, "//div[@class='c-banner__title']")
+        if banner:
+            logger.warning(f"Couldn't book ☹️: Message from site banner - {banner[0].text}")
+            if "already in waitlist" in banner[0].text:
+                utils.update_record(appt["datetime"], "booked")
+        else:
+            logger.warning(f"Coulldn't book ☹️: {type(e).__name__} - {e}")
+            
+    except Exception as e:
+        logger.error(f"Error occured ☹️: {type(e).__name__} - {e}")
 
     # close the browser
     driver.close()
 
 
 if __name__ == "__main__":
-    # while True:
-    #     if datetime.now().hour in [5, 9]:
-    #         if datetime.now().minute in list(range(15)):
-    #             print("\n===", datetime.now().strftime("%d/%m/%Y, %H:%M:%S"), "===")
-    #             get_avail_bookings()
-    #     time.sleep(60)
 
-    wishlist = [datetime(2024, 3, 21, 11, 30)]
-    available = get_avail_bookings(BookingsWebsite.URL)
-    book(available, wishlist)
+    if wishlist := utils.get_wishlist():
+        logger.info(f"Wishlist: {wishlist}")
+
+        available = get_avail_bookings(BookingsWebsite.URL)
+        logger.info(f"Available bookings: {[a.get('datetime') for a in available]}")
+
+        book(available, wishlist)
+    else:
+        logger.info(f"Skipping run...No wishlist items within booking window")
