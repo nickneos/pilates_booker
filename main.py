@@ -1,5 +1,5 @@
 from urllib.parse import urlparse, parse_qs
-from datetime import datetime
+import re
 import time
 import logging
 
@@ -9,9 +9,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from settings import MindBodyCredentials, BookingsWebsite
 
 # my modules
+from settings import MindBodyCredentials, BookingsWebsite
 import utils
 
 # initialise logger
@@ -42,7 +42,7 @@ def get_avail_bookings(url):
             )
         )
     except Exception as e:
-        logger.error(f"Error occured ☹️: {type(e).__name__} - {e}")
+        logger.error(f"{type(e).__name__} - {e}")
 
     # wait a bit longer
     time.sleep(2)
@@ -119,7 +119,6 @@ def send_booking_request(appt):
         pwd_field = wait.until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, "input#password"))
         )
-
         time.sleep(1)
         user_field.send_keys(MindBodyCredentials.USER)
         time.sleep(1)
@@ -144,19 +143,21 @@ def send_booking_request(appt):
     except TimeoutException:
         # check if you already had the booking
         banner = driver.find_elements(By.CSS_SELECTOR, "div.c-banner__title")
+
         if banner:
-            logger.warning(
-                f"Couldn't book ☹️: Message from site banner - {banner[0].text}"
-            )
-            if (
-                "already in waitlist" in banner[0].text
-            ):  # TODO handle error msg if already booked into class
+            logger.warning(f"Message from site banner: {banner[0].text}")
+
+            if "already in waitlist" in banner[0].text:
                 utils.update_record(appt["datetime"], "booked")
+
+            if re.match(r"already.*book", banner[0].text, flags=re.IGNORECASE):
+                utils.update_record(appt["datetime"], "booked")
+
         else:
             logger.warning(f"Couldn't book ☹️: {type(e).__name__} - {e}")
 
     except Exception as e:
-        logger.error(f"Error occured ☹️: {type(e).__name__} - {e}")
+        logger.error(f"{type(e).__name__} - {e}")
 
     # close the browser
     driver.close()
@@ -174,7 +175,7 @@ def configure_logger():
 
 if __name__ == "__main__":
     configure_logger()
-    
+
     if wishlist := utils.get_wishlist():
         logger.info(f"Wishlist: {wishlist}")
 
