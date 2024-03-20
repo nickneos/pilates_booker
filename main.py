@@ -2,7 +2,6 @@ from urllib.parse import urlparse, parse_qs
 from datetime import datetime
 import time
 import logging
-import json
 
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
