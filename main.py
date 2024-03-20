@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def get_avail_bookings(url):
     """
     Return a list of all the available bookings from the `url`
-    
+
     Args:
     url (string): The url of the website listing the available bookings.
     """
@@ -38,19 +38,18 @@ def get_avail_bookings(url):
     try:
         WebDriverWait(driver, 30).until(
             EC.visibility_of_element_located(
-                (By.XPATH, "//button[@class='bw-widget__signup-now bw-widget__cta']")
+                (By.CSS_SELECTOR, "button.bw-widget__signup-now.bw-widget__cta")
             )
         )
     except Exception as e:
         logger.error(f"Error occured ☹️: {type(e).__name__} - {e}")
-
 
     # wait a bit longer
     time.sleep(2)
 
     # get all buttons
     buttons = driver.find_elements(
-        By.XPATH, "//button[@class='bw-widget__signup-now bw-widget__cta']"
+        By.CSS_SELECTOR, "button.bw-widget__signup-now.bw-widget__cta"
     )
 
     # to store all the booking detailss
@@ -74,7 +73,7 @@ def book(avail_bookings, wishlist):
     """
     Loops through `avail_bookings`.
     For the ones that are in the `wishlist`, send a booking request
-    
+
     Args:
     avail_bookings (list): List of dictionaries representing the available timeslots/appointments that can be booked.
     wishlist (list):       List of timeslots wanting to book
@@ -89,7 +88,7 @@ def book(avail_bookings, wishlist):
 def send_booking_request(appt):
     """
     Make the booking using the booking url in `appt`
-    
+
     Args:
     appt (dict): Contains details of the "appointment" to book.
                  Keys are `url`, `datetime`, and `text`.
@@ -107,7 +106,7 @@ def send_booking_request(appt):
     wait = WebDriverWait(driver, 10)
     element = wait.until(
         EC.visibility_of_element_located(
-            (By.XPATH, "//a[@href='/sites/112721/cart/proceed_to_checkout']")
+            (By.CSS_SELECTOR, "a[href='/sites/112721/cart/proceed_to_checkout']")
         )
     )
     element.click()
@@ -115,10 +114,10 @@ def send_booking_request(appt):
     # login with credentials
     try:
         user_field = wait.until(
-            EC.visibility_of_element_located((By.XPATH, "//input[@id='username']"))
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "input#username"))
         )
         pwd_field = wait.until(
-            EC.visibility_of_element_located((By.XPATH, "//input[@id='password']"))
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "input#password"))
         )
 
         time.sleep(1)
@@ -126,7 +125,7 @@ def send_booking_request(appt):
         time.sleep(1)
         pwd_field.send_keys(MindBodyCredentials.PWD)
         time.sleep(1)
-        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
     except TimeoutException:
         # probably already logged in?
@@ -135,21 +134,27 @@ def send_booking_request(appt):
     # wait for green tick (hopefully)
     try:
         WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.XPATH, "//div[@class='thank thank-booking-complete']"))
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, "div.thank.thank-booking-complete")
+            )
         )
         logger.info("Booked! 🙂")
         utils.update_record(appt["datetime"], "booked")
 
     except TimeoutException:
         # check if you already had the booking
-        banner = driver.find_elements(By.XPATH, "//div[@class='c-banner__title']")
+        banner = driver.find_elements(By.CSS_SELECTOR, "div.c-banner__title")
         if banner:
-            logger.warning(f"Couldn't book ☹️: Message from site banner - {banner[0].text}")
-            if "already in waitlist" in banner[0].text:    # TODO handle error msg if already booked into class
+            logger.warning(
+                f"Couldn't book ☹️: Message from site banner - {banner[0].text}"
+            )
+            if (
+                "already in waitlist" in banner[0].text
+            ):  # TODO handle error msg if already booked into class
                 utils.update_record(appt["datetime"], "booked")
         else:
             logger.warning(f"Couldn't book ☹️: {type(e).__name__} - {e}")
-            
+
     except Exception as e:
         logger.error(f"Error occured ☹️: {type(e).__name__} - {e}")
 
