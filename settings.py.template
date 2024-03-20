@@ -1,9 +1,0 @@
-### NOTE: Fill this out and save as settings.py ###
-
-
-class BookingsWebsite():
-    URL = ""
-
-class MindBodyCredentials():
-    USER = ""
-    PWD = ""

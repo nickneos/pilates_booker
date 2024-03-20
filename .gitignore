@@ -163,5 +163,4 @@ cython_debug/
 bookings.csv
 *.tar.gz
 settings.py
-pilates_booker.sh
 *.log.*

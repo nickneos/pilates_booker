@@ -1,0 +1,9 @@
+### NOTE: Fill this out and save as settings.py ###
+
+
+class BookingsWebsite():
+    URL = "https://somewebsite.com/path"
+
+class Credentials():
+    USER = "username@email.com"
+    PWD = "Password123"

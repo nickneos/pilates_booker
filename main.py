@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 # my modules
-from settings import MindBodyCredentials, BookingsWebsite
+from settings import Credentials, BookingsWebsite
 import utils
 
 # initialise logger
@@ -120,9 +120,9 @@ def send_booking_request(appt):
             EC.visibility_of_element_located((By.CSS_SELECTOR, "input#password"))
         )
         time.sleep(1)
-        user_field.send_keys(MindBodyCredentials.USER)
+        user_field.send_keys(Credentials.USER)
         time.sleep(1)
-        pwd_field.send_keys(MindBodyCredentials.PWD)
+        pwd_field.send_keys(Credentials.PWD)
         time.sleep(1)
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
