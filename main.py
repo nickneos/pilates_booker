@@ -66,6 +66,8 @@ def get_avail_bookings(url):
     # close the browser
     driver.close()
 
+    logger.info(f"Available bookings: {[b.get('datetime') for b in bookings]}")
+
     return bookings
 
 
@@ -78,11 +80,16 @@ def book(avail_bookings, wishlist):
     avail_bookings (list): List of dictionaries representing the available timeslots/appointments that can be booked.
     wishlist (list):       List of timeslots wanting to book
     """
+    matches = 0
 
     for appt in avail_bookings:
         if appt["datetime"] in wishlist:
+            matches += 1
             logger.info(f"Found [{appt['text']}] for {appt['datetime']}")
             send_booking_request(appt)
+
+    if matches == 0:
+        logger.info(f"No available bookings for desired timeslot")
 
 
 def send_booking_request(appt):
@@ -180,8 +187,6 @@ if __name__ == "__main__":
         logger.info(f"Wishlist: {wishlist}")
 
         available = get_avail_bookings(BookingsWebsite.URL)
-        logger.info(f"Available bookings: {[a.get('datetime') for a in available]}")
-
         book(available, wishlist)
     else:
         logger.info(f"Skipping run...No wishlist items within booking window")
