@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
 # my modules
-from settings import Credentials, BookingsWebsite
+from settings import Credentials
 import utils
 
 # initialise logger
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     if wishlist := utils.get_wishlist():
         logger.info(f"Wishlist: {wishlist}")
 
-        available = get_avail_bookings(BookingsWebsite.URL)
+        available = get_avail_bookings(Credentials.URL)
         book(available, wishlist)
     else:
         logger.info(f"Skipping run...No wishlist items within booking window")
