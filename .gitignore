@@ -164,3 +164,4 @@ bookings.csv
 *.tar.gz
 settings.py
 *.log.*
+.vscode/
