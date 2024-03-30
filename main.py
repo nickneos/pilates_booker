@@ -2,6 +2,8 @@ from urllib.parse import urlparse, parse_qs
 import re
 import time
 import logging
+import sys
+import argparse
 
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
@@ -170,18 +172,38 @@ def send_booking_request(appt):
     driver.close()
 
 
-def configure_logger():
+def configure_logger(log_to_screen=False):
     """Setup the logger"""
+    handlers = [logging.FileHandler("pilates_booker.log")]
+
+    if log_to_screen:
+        handlers.append(logging.StreamHandler(sys.stdout))
+
     logging.basicConfig(
-        filename="pilates_booker.log",
+        # filename="pilates_booker.log",
+        handlers=handlers,
         format="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.INFO,
     )
 
 
+def parse_args():
+    # cli arguments
+    parser = argparse.ArgumentParser(description="Pilates booker ")
+    parser.add_argument(
+        "-p",
+        "--print-to-screen",
+        action="store_true",
+        help="Prints log to stdout",
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    configure_logger()
+    args = parse_args()
+    configure_logger(args.print_to_screen)
 
     if wishlist := utils.get_wishlist():
         logger.info(f"Wishlist: {wishlist}")
