@@ -155,13 +155,11 @@ def send_booking_request(appt):
 
         if banner:
             logger.warning(f"Message from site banner: {banner[0].text}")
-
-            if "already in waitlist" in banner[0].text:
+            if (
+                "cannot book" in banner[0].text.lower()
+                and "registered" in banner[0].text.lower()
+            ):
                 utils.update_record(appt["datetime"], "booked")
-
-            if re.match(r"already.*book", banner[0].text, flags=re.IGNORECASE):
-                utils.update_record(appt["datetime"], "booked")
-
         else:
             logger.warning(f"Couldn't book ☹️: {type(e).__name__} - {e}")
 
@@ -182,7 +180,7 @@ def configure_logger(log_to_screen=False):
     logging.basicConfig(
         # filename="pilates_booker.log",
         handlers=handlers,
-        format="%(asctime)s.%(msecs)03d %(name)s %(levelname)s %(message)s",
+        format="%(asctime)s.%(msecs)03d %(name)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         level=logging.INFO,
     )
