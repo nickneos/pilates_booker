@@ -85,7 +85,7 @@ def list_of_dates(n=180):
     return [today + timedelta(days=x) for x in range(n)]
 
 
-def generate_timeslots(timeslot, *args):
+def generate_timeslots(timeslot, days=180, *args):
     """Add timeslots to bookings csv based on the provided
     `timeslot` for days of week provided by `*args`
 
@@ -94,7 +94,7 @@ def generate_timeslots(timeslot, *args):
     *args (str): Variable length argument list of days of week eg. ("Mon", "Sat", "Sun").
     """
 
-    dates = list_of_dates()
+    dates = list_of_dates(days)
     t = datetime.time(datetime.strptime(timeslot, "%H:%M"))
     timeslots = []
 
@@ -107,6 +107,6 @@ def generate_timeslots(timeslot, *args):
 
 
 if __name__ == "__main__":
-    print(get_wishlist())
-    # d = ("Mon", "Thu", "Fri")
-    # insert_records(generate_timeslots("6:30", *d))
+    # print(get_wishlist())
+    d = ("Mon", "Fri")
+    insert_records(generate_timeslots("6:30", 365, *d))
