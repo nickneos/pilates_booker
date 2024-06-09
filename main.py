@@ -112,7 +112,7 @@ def send_booking_request(appt):
     driver.get(appt["url"])
 
     # click next
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, 30)
     element = wait.until(
         EC.visibility_of_element_located(
             (By.CSS_SELECTOR, "a[href='/sites/112721/cart/proceed_to_checkout']")
@@ -155,11 +155,16 @@ def send_booking_request(appt):
 
         if banner:
             logger.warning(f"Message from site banner: {banner[0].text}")
-            if (
-                "cannot book" in banner[0].text.lower()
-                and "registered" in banner[0].text.lower()
-            ):
+
+            if "already in class" in banner[0].text.lower():
                 utils.update_record(appt["datetime"], "booked")
+
+            if "registered for another session" in banner[0].text.lower():
+                utils.update_record(appt["datetime"], "booked")
+
+            elif ("already in waitlist" in banner[0].text.lower()):
+                utils.update_record(appt["datetime"], "waitlisted")
+
         else:
             logger.warning(f"Couldn't book ☹️: {type(e).__name__} - {e}")
 

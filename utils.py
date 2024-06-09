@@ -32,11 +32,14 @@ def get_wishlist(days_in_advance=2):
         date.today() + timedelta(days=days_in_advance + 1), time()
     )
 
+    date_gt = datetime.now() + timedelta(hours=6)
+
     return [
         b.get("datetime")
         for b in bookings
-        if b.get("status").lower().strip() != "booked"
+        if b.get("status").lower().strip() not in ("booked", "waitlisted")
         and datetime.strptime(b.get("datetime"), "%Y-%m-%d %H:%M:%S") < date_filter
+        and datetime.strptime(b.get("datetime"), "%Y-%m-%d %H:%M:%S") >= date_gt
     ]
 
 
@@ -108,5 +111,7 @@ def generate_timeslots(timeslot, days=180, *args):
 
 if __name__ == "__main__":
     # print(get_wishlist())
-    d = ("Mon", "Fri")
-    insert_records(generate_timeslots("6:30", 365, *d))
+    d = ("Sun",)
+    # insert_records(generate_timeslots("8:00", 365, *d))
+    x = get_wishlist()
+    print(x)
