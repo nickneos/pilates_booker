@@ -92,6 +92,8 @@ def book(avail_bookings, wishlist):
 
     if matches == 0:
         logger.info(f"No available bookings for desired timeslot")
+    else:
+        logger.info("checkpoint")
 
 
 def send_booking_request(appt):
@@ -108,11 +110,14 @@ def send_booking_request(appt):
     options.add_argument("--headless")
     driver = webdriver.Firefox(options=options)
 
+    # for debugging
+    logger.info(f"appt object: {appt}")
+
     # Open page
     driver.get(appt["url"])
 
     # click next
-    wait = WebDriverWait(driver, 30)
+    wait = WebDriverWait(driver, 60)
     element = wait.until(
         EC.visibility_of_element_located(
             (By.CSS_SELECTOR, "a[href='/sites/112721/cart/proceed_to_checkout']")
@@ -122,12 +127,14 @@ def send_booking_request(appt):
 
     # login with credentials
     try:
+        logger.info("waiting for login screen")
         user_field = wait.until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, "input#username"))
         )
         pwd_field = wait.until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, "input#password"))
         )
+        logger.info("logging in")
         time.sleep(1)
         user_field.send_keys(Credentials.USER)
         time.sleep(1)
@@ -137,10 +144,11 @@ def send_booking_request(appt):
 
     except TimeoutException:
         # probably already logged in?
-        pass
+        logger.error("wait for login screen timed out")
 
     # wait for green tick (hopefully)
     try:
+        logger.info("waiting for green tick (hopefully)")
         WebDriverWait(driver, 30).until(
             EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "div.thank.thank-booking-complete")
