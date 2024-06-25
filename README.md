@@ -13,10 +13,5 @@ I trigger this script at the required time via crontab.
 3. Activate venv and install requirements:
    ```bash
    source .venv/bin/activate
-   pip install requirements.txt
-   ```
-4. (Optional) Schedule wrapper shell script `pilates_booker.sh` via crontab eg.
-   ```sh
-   # every 5 minutes 5am-6am
-   */5 5 * * *  /path/to/pilates_booker.sh
+   pip install -r requirements.txt
    ```
