@@ -15,9 +15,11 @@ from selenium.common.exceptions import TimeoutException
 # my modules
 from settings import Credentials
 import utils
+from my_logger import configure_logger
 
 # initialise logger
 logger = logging.getLogger(__name__)
+configure_logger(logger, log_file="pilates_booker.log")
 
 
 def get_avail_bookings(url):
@@ -199,22 +201,7 @@ def configure_logger(log_to_screen=False):
     )
 
 
-def parse_args():
-    # cli arguments
-    parser = argparse.ArgumentParser(description="Pilates booker ")
-    parser.add_argument(
-        "-p",
-        "--print-to-screen",
-        action="store_true",
-        help="Prints log to stdout",
-    )
-
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_args()
-    configure_logger(args.print_to_screen)
 
     if wishlist := utils.get_wishlist():
         logger.info(f"Wishlist: {wishlist}")
