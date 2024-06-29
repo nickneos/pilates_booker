@@ -1,5 +1,5 @@
 from urllib.parse import urlparse, parse_qs
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import time
 import logging
@@ -23,12 +23,15 @@ logger = logging.getLogger(__name__)
 configure_logger(logger, log_file="pilates_booker.log")
 
 
+RETRY_MINUTES = 10
+
+
 def get_avail_bookings(url):
     """
     Return a list of all the available bookings from the `url`
 
     Args:
-    url (string): The url of the website listing the available bookings.
+        url (str): The url of the website listing the available bookings.
     """
 
     # initialise webdriver
@@ -78,26 +81,28 @@ def get_avail_bookings(url):
 
 def book(avail_bookings, wishlist):
     """
-    Loops through `avail_bookings`.
-    For the ones that are in the `wishlist`, send a booking request
+    Loops through `avail_bookings`. For the ones that are in the `wishlist`, send a booking request
 
     Args:
-    avail_bookings (list): List of dictionaries representing the available timeslots/appointments that can be booked.
-    wishlist (list):       List of timeslots wanting to book
+        avail_bookings (list): List of dictionaries representing the available timeslots/appointments that can be booked.
+        wishlist (list): List of timeslots wanting to book
+
+    Returns:
+        bool: `True` if booking made, else `False`
     """
-    matches = 0
+    bookings_made = 0
 
     for appt in avail_bookings:
         if appt["datetime"] in wishlist:
-            matches += 1
             logger.info(f"Found [{appt['text']}] for {appt['datetime']}")
-            send_booking_request(appt)
+            if send_booking_request(appt):
+                bookings_made += 1
 
-    if matches == 0:
-        logger.info(f"No available bookings for desired timeslot...retry in 5 seconds")
-        book(avail_bookings, wishlist)
+    if bookings_made == 0:
+        return False
     else:
         logger.info("checkpoint")
+        return True
 
 
 def send_booking_request(appt):
@@ -105,9 +110,13 @@ def send_booking_request(appt):
     Make the booking using the booking url in `appt`
 
     Args:
-    appt (dict): Contains details of the "appointment" to book.
-                 Keys are `url`, `datetime`, and `text`.
+        appt (dict): Contains details of the "appointment" to book.
+            Keys are `url`, `datetime`, and `text`.
+
+    Returns:
+        bool: `True` if booking made, else `False`
     """
+    booked = False
 
     # initialise webdriver
     options = Options()
@@ -158,6 +167,7 @@ def send_booking_request(appt):
                 (By.CSS_SELECTOR, "div.thank.thank-booking-complete")
             )
         )
+        booked = True
         logger.info("Booked! 🙂")
         utils.update_record(appt["datetime"], "booked")
 
@@ -170,12 +180,15 @@ def send_booking_request(appt):
 
             if "already in class" in banner[0].text.lower():
                 utils.update_record(appt["datetime"], "booked")
+                booked = True
 
             if "registered for another session" in banner[0].text.lower():
                 utils.update_record(appt["datetime"], "booked")
+                booked = True
 
             elif ("already in waitlist" in banner[0].text.lower()):
                 utils.update_record(appt["datetime"], "waitlisted")
+                booked = True
 
         else:
             logger.warning(f"Couldn't book ☹️: {type(e).__name__} - {e}")
@@ -183,34 +196,32 @@ def send_booking_request(appt):
     except Exception as e:
         logger.error(f"{type(e).__name__} - {e}")
 
-    # close the browser
-    driver.close()
+    finally:
+        # close the browser
+        driver.close()
 
-
-def configure_logger(log_to_screen=False):
-    """Setup the logger"""
-    handlers = [logging.FileHandler("pilates_booker.log")]
-
-    if log_to_screen:
-        handlers.append(logging.StreamHandler(sys.stdout))
-
-    logging.basicConfig(
-        # filename="pilates_booker.log",
-        handlers=handlers,
-        format="%(asctime)s.%(msecs)03d %(name)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        level=logging.INFO,
-    )
+        return booked
 
 
 if __name__ == "__main__":
 
     if wishlist := utils.get_wishlist():
+        time_start = datetime.now()
+        booked = False
         logger.info(f"Wishlist: {wishlist}")
 
-        # if datetime.strftime(datetime.now(),"%H:%M") == "05:00":
-        #     time.sleep(10)
-        available = get_avail_bookings(Credentials.URL)
-        book(available, wishlist)
+        while not booked:
+            available = get_avail_bookings(Credentials.URL)
+            booked = book(available, wishlist)
+
+            # retry if booking not made
+            if not booked:
+                # check within retry minutes
+                if time_start > datetime.now() - timedelta(minutes=RETRY_MINUTES):
+                    logger.warning("No available bookings for desired timeslot...retry in 5 seconds")
+                    time.sleep(5)
+                else:
+                    logger.warning(f"RETRY_MINUTES ({RETRY_MINUTES}) expired")
+                    break
     else:
         logger.info(f"Skipping run...No wishlist items within booking window")
