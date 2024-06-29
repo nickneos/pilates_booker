@@ -1,4 +1,5 @@
 from urllib.parse import urlparse, parse_qs
+from datetime import datetime
 import re
 import time
 import logging
@@ -93,7 +94,8 @@ def book(avail_bookings, wishlist):
             send_booking_request(appt)
 
     if matches == 0:
-        logger.info(f"No available bookings for desired timeslot")
+        logger.info(f"No available bookings for desired timeslot...retry in 5 seconds")
+        book(avail_bookings, wishlist)
     else:
         logger.info("checkpoint")
 
@@ -206,6 +208,8 @@ if __name__ == "__main__":
     if wishlist := utils.get_wishlist():
         logger.info(f"Wishlist: {wishlist}")
 
+        # if datetime.strftime(datetime.now(),"%H:%M") == "05:00":
+        #     time.sleep(10)
         available = get_avail_bookings(Credentials.URL)
         book(available, wishlist)
     else:
