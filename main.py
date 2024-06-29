@@ -130,7 +130,7 @@ def send_booking_request(appt):
     driver.get(appt["url"])
 
     # click next
-    wait = WebDriverWait(driver, 60)
+    wait = WebDriverWait(driver, 30)
     element = wait.until(
         EC.visibility_of_element_located(
             (By.CSS_SELECTOR, "a[href='/sites/112721/cart/proceed_to_checkout']")
@@ -171,7 +171,7 @@ def send_booking_request(appt):
         logger.info("Booked! 🙂")
         utils.update_record(appt["datetime"], "booked")
 
-    except TimeoutException:
+    except Exception as e:
         # check if you already had the booking
         banner = driver.find_elements(By.CSS_SELECTOR, "div.c-banner__title")
 
@@ -182,7 +182,7 @@ def send_booking_request(appt):
                 utils.update_record(appt["datetime"], "booked")
                 booked = True
 
-            if "registered for another session" in banner[0].text.lower():
+            elif "registered for another session" in banner[0].text.lower():
                 utils.update_record(appt["datetime"], "booked")
                 booked = True
 
@@ -191,10 +191,7 @@ def send_booking_request(appt):
                 booked = True
 
         else:
-            logger.warning(f"Couldn't book ☹️: {type(e).__name__} - {e}")
-
-    except Exception as e:
-        logger.error(f"{type(e).__name__} - {e}")
+            logger.error(f"{type(e).__name__} - {e}")
 
     finally:
         # close the browser

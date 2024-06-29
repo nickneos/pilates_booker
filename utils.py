@@ -93,8 +93,8 @@ def generate_timeslots(timeslot, days=180, *args):
     `timeslot` for days of week provided by `*args`
 
     Args:
-    timeslot (str):  timeslot as a string in `HH:MM` format. eg "06:30"
-    *args (str): Variable length argument list of days of week eg. ("Mon", "Sat", "Sun").
+        timeslot (str):  timeslot as a string in `HH:MM` format. eg "06:30"
+        *args (str): Variable length argument list of days of week eg. ("Mon", "Sat", "Sun").
     """
 
     dates = list_of_dates(days)
