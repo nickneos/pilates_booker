@@ -22,7 +22,6 @@ from my_logger import configure_logger
 logger = logging.getLogger(__name__)
 configure_logger(logger, log_file="pilates_booker.log")
 
-
 RETRY_MINUTES = 10
 
 
@@ -36,6 +35,16 @@ def get_web_driver(headless=True):
 
 
 def sign_in(driver, url="https://cart.mindbodyonline.com/sites/112721/session/new"):
+    """Signs in to mindbody account.
+
+    Args:
+        driver (obj): selenium webdriver instance
+        url (str, optional): mindbody account login url.
+          Defaults to "https://cart.mindbodyonline.com/sites/112721/session/new".
+
+    Returns:
+        obj: selenium webdriver object
+    """
 
     # open page
     driver.get(url)
@@ -55,7 +64,7 @@ def sign_in(driver, url="https://cart.mindbodyonline.com/sites/112721/session/ne
         logger.info("logging in")
         user_field.send_keys(Credentials.USER)
         pwd_field.send_keys(Credentials.PWD)
-        
+
         # press submit button
         element = wait.until(
             EC.visibility_of_element_located((By.CSS_SELECTOR, "button[type='submit']"))
@@ -64,7 +73,9 @@ def sign_in(driver, url="https://cart.mindbodyonline.com/sites/112721/session/ne
 
         # wait until logged in
         wait.until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, "div.icon__user-initials"))
+            EC.visibility_of_element_located(
+                (By.CSS_SELECTOR, "div.icon__user-initials")
+            )
         )
         logger.info("logged in")
     except Exception as e:
@@ -78,7 +89,7 @@ def get_avail_bookings(driver, url):
     Return a list of all the available bookings from the `url`
 
     Args:
-        driver (obj): webdriver
+        driver (obj): selenium webdriver instance.
         url (str): The url of the website listing the available bookings.
     """
 
@@ -124,8 +135,9 @@ def book(driver, avail_bookings, wishlist):
     Loops through `avail_bookings`. For the ones that are in the `wishlist`, send a booking request
 
     Args:
+        driver (obj): selenium webdriver instance.
         avail_bookings (list): List of dictionaries representing the available timeslots/appointments that can be booked.
-        wishlist (list): List of timeslots wanting to book
+        wishlist (list): List of timeslots wanting to book.
 
     Returns:
         bool: `True` if booking made, else `False`
@@ -150,7 +162,7 @@ def send_booking_request(driver, appt):
     Make the booking using the booking url in `appt`
 
     Args:
-        driver (obj): 
+        driver (obj): selenium webdriver instance.
         appt (dict): Contains details of the "appointment" to book.
             Keys are `url`, `datetime`, and `text`.
 
@@ -201,7 +213,7 @@ def send_booking_request(driver, appt):
                 utils.update_record(appt["datetime"], "booked")
                 booked = True
 
-            elif ("already in waitlist" in banner[0].text.lower()):
+            elif "already in waitlist" in banner[0].text.lower():
                 utils.update_record(appt["datetime"], "waitlisted")
                 booked = True
 
@@ -236,7 +248,7 @@ if __name__ == "__main__":
                 else:
                     logger.warning(f"RETRY_MINUTES ({RETRY_MINUTES}) expired")
                     break
-        
+
         driver.close()
 
     else:
