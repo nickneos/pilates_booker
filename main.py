@@ -26,18 +26,61 @@ configure_logger(logger, log_file="pilates_booker.log")
 RETRY_MINUTES = 10
 
 
-def get_avail_bookings(url):
+def get_web_driver(headless=True):
+    options = Options()
+
+    if headless:
+        options.add_argument("--headless")
+
+    return webdriver.Firefox(options=options)
+
+
+def sign_in(driver, url="https://cart.mindbodyonline.com/sites/112721/session/new"):
+
+    # open page
+    driver.get(url)
+
+    # login with credentials
+    try:
+        logger.info("waiting for login screen")
+        wait = WebDriverWait(driver, 30)
+
+        # populate user and password fields
+        user_field = wait.until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "input#username"))
+        )
+        pwd_field = wait.until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "input#password"))
+        )
+        logger.info("logging in")
+        user_field.send_keys(Credentials.USER)
+        pwd_field.send_keys(Credentials.PWD)
+        
+        # press submit button
+        element = wait.until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "button[type='submit']"))
+        )
+        element.click()
+
+        # wait until logged in
+        wait.until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, "div.icon__user-initials"))
+        )
+        logger.info("logged in")
+    except Exception as e:
+        logger.error(f"{type(e).__name__} - {e}")
+
+    return driver
+
+
+def get_avail_bookings(driver, url):
     """
     Return a list of all the available bookings from the `url`
 
     Args:
+        driver (obj): webdriver
         url (str): The url of the website listing the available bookings.
     """
-
-    # initialise webdriver
-    options = Options()
-    options.add_argument("--headless")
-    driver = webdriver.Firefox(options=options)
 
     # open page
     driver.get(url)
@@ -53,7 +96,7 @@ def get_avail_bookings(url):
         logger.error(f"{type(e).__name__} - {e}")
 
     # wait a bit longer
-    time.sleep(2)
+    # time.sleep(1)
 
     # get all buttons
     buttons = driver.find_elements(
@@ -71,15 +114,12 @@ def get_avail_bookings(url):
         dt = utils.convert_booking_date_str(qs["item[info]"][0])
         bookings.append({"url": book_url, "datetime": dt, "text": btn.text})
 
-    # close the browser
-    driver.close()
-
     logger.info(f"Available bookings: {[b.get('datetime') for b in bookings]}")
 
     return bookings
 
 
-def book(avail_bookings, wishlist):
+def book(driver, avail_bookings, wishlist):
     """
     Loops through `avail_bookings`. For the ones that are in the `wishlist`, send a booking request
 
@@ -95,7 +135,7 @@ def book(avail_bookings, wishlist):
     for appt in avail_bookings:
         if appt["datetime"] in wishlist:
             logger.info(f"Found [{appt['text']}] for {appt['datetime']}")
-            if send_booking_request(appt):
+            if send_booking_request(driver, appt):
                 bookings_made += 1
 
     if bookings_made == 0:
@@ -105,11 +145,12 @@ def book(avail_bookings, wishlist):
         return True
 
 
-def send_booking_request(appt):
+def send_booking_request(driver, appt):
     """
     Make the booking using the booking url in `appt`
 
     Args:
+        driver (obj): 
         appt (dict): Contains details of the "appointment" to book.
             Keys are `url`, `datetime`, and `text`.
 
@@ -117,11 +158,6 @@ def send_booking_request(appt):
         bool: `True` if booking made, else `False`
     """
     booked = False
-
-    # initialise webdriver
-    options = Options()
-    options.add_argument("--headless")
-    driver = webdriver.Firefox(options=options)
 
     # for debugging
     logger.info(f"appt object: {appt}")
@@ -137,27 +173,6 @@ def send_booking_request(appt):
         )
     )
     element.click()
-
-    # login with credentials
-    try:
-        logger.info("waiting for login screen")
-        user_field = wait.until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, "input#username"))
-        )
-        pwd_field = wait.until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, "input#password"))
-        )
-        logger.info("logging in")
-        time.sleep(1)
-        user_field.send_keys(Credentials.USER)
-        time.sleep(1)
-        pwd_field.send_keys(Credentials.PWD)
-        time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-
-    except TimeoutException:
-        # probably already logged in?
-        logger.error("wait for login screen timed out")
 
     # wait for green tick (hopefully)
     try:
@@ -194,31 +209,35 @@ def send_booking_request(appt):
             logger.error(f"{type(e).__name__} - {e}")
 
     finally:
-        # close the browser
-        driver.close()
-
         return booked
 
 
 if __name__ == "__main__":
 
     if wishlist := utils.get_wishlist():
+        driver = get_web_driver()
+
         time_start = datetime.now()
         booked = False
         logger.info(f"Wishlist: {wishlist}")
 
+        sign_in(driver)
+
         while not booked:
-            available = get_avail_bookings(Credentials.URL)
-            booked = book(available, wishlist)
+            available = get_avail_bookings(driver, Credentials.URL)
+            booked = book(driver, available, wishlist)
 
             # retry if booking not made
             if not booked:
                 # check within retry minutes
                 if time_start > datetime.now() - timedelta(minutes=RETRY_MINUTES):
-                    logger.warning("No available bookings for desired timeslot...retry in 5 seconds")
-                    time.sleep(5)
+                    logger.warning("No available bookings for desired timeslot...retrying")
+                    time.sleep(1)
                 else:
                     logger.warning(f"RETRY_MINUTES ({RETRY_MINUTES}) expired")
                     break
+        
+        driver.close()
+
     else:
         logger.info(f"Skipping run...No wishlist items within booking window")

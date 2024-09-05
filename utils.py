@@ -111,7 +111,7 @@ def generate_timeslots(timeslot, days=180, *args):
 
 if __name__ == "__main__":
     # print(get_wishlist())
-    d = ("Thu",)
+    d = ("Sat",)
     insert_records(generate_timeslots("6:30", 365, *d))
     # x = get_wishlist()
     # print(x)
