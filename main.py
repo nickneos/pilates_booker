@@ -98,13 +98,14 @@ def get_avail_bookings(driver, url):
 
     # wait for a button to appear
     try:
-        WebDriverWait(driver, 30).until(
+        WebDriverWait(driver, 12).until(
             EC.visibility_of_element_located(
                 (By.CSS_SELECTOR, "button.bw-widget__signup-now.bw-widget__cta")
             )
         )
     except Exception as e:
         logger.error(f"{type(e).__name__} - {e}")
+        return []
 
     # wait a bit longer
     # time.sleep(1)
@@ -233,23 +234,28 @@ if __name__ == "__main__":
         booked = False
         logger.info(f"Wishlist: {wishlist}")
 
-        sign_in(driver)
+        try:
+            sign_in(driver)
 
-        while not booked:
-            available = get_avail_bookings(driver, Credentials.URL)
-            booked = book(driver, available, wishlist)
+            while not booked:
+                available = get_avail_bookings(driver, Credentials.URL)
+                booked = book(driver, available, wishlist)
 
-            # retry if booking not made
-            if not booked:
-                # check within retry minutes
-                if time_start > datetime.now() - timedelta(minutes=RETRY_MINUTES):
-                    logger.warning("No available bookings for desired timeslot...retrying")
-                    time.sleep(1)
-                else:
-                    logger.warning(f"RETRY_MINUTES ({RETRY_MINUTES}) expired")
-                    break
+                # retry if booking not made
+                if not booked:
+                    # check within retry minutes
+                    if time_start > datetime.now() - timedelta(minutes=RETRY_MINUTES):
+                        logger.warning("No available bookings for desired timeslot...retrying")
+                        time.sleep(1)
+                    else:
+                        logger.warning(f"RETRY_MINUTES ({RETRY_MINUTES}) expired")
+                        break
 
-        driver.close()
+            driver.close()
+            
+        except Exception as e:
+            driver.close()
+            logger.error(f"{type(e).__name__}: {e}")
 
     else:
         logger.info(f"Skipping run...No wishlist items within booking window")
