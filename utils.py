@@ -3,6 +3,7 @@ from tempfile import NamedTemporaryFile
 import shutil
 import csv
 import logging
+import json
 
 # initialise logging
 logger = logging.getLogger(__name__)
@@ -18,9 +19,16 @@ def convert_booking_date_str(str_date):
 def get_bookings_data(csv_file="bookings.csv"):
     """Read bookings csv and return data as list of dicts"""
     rows = []
+
+    # insert current week of wanted timeslots to csv
+    next_days_wanted = wanted_timeslots()    
+    insert_records(next_days_wanted)
+
+    # get all bookings from csv
     with open(csv_file, "r", encoding="utf-8", newline="") as f:
         for row in csv.DictReader(f):
             rows.append(row)
+    
     return rows
 
 
@@ -109,9 +117,56 @@ def generate_timeslots(timeslot, days=180, *args):
     return timeslots
 
 
+def wanted_timeslots(config="config.json"):
+    """Get a list of upcoming timeslots wanted based on config file.
+
+    Args:
+        config (str, optional): Path to config json. Defaults to "config.json".
+
+    Returns:
+        list: List of timeslots
+    """
+    dtms = []
+
+    with open(config) as fp:
+        cfg = json.load(fp)
+    
+    for k, v in cfg.items():
+        dtms.append(f"{get_next_weekday(k)} {v}")
+    
+    return dtms
+
+
+def get_next_weekday(day_name):
+    """Returns the next date from the day name provided.
+
+    Args:
+        day_name (str): day name eg. "monday".
+
+    Returns:
+        date: The next date from the day name provided.
+    """
+    today = date.today()
+    days = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    ]
+    day_index = days.index(day_name.lower())
+    return today + timedelta((day_index - today.weekday()) % 7)
+
+
 if __name__ == "__main__":
     # print(get_wishlist())
-    d = ("Sat",)
-    insert_records(generate_timeslots("6:30", 365, *d))
+    # d = ("Sat",)
+    # insert_records(generate_timeslots("6:30", 365, *d))
     # x = get_wishlist()
     # print(x)
+    # print(get_next_weekday("Thursday"))
+    # print(wanted_timeslots())
+    print(get_bookings_data())
+    # print(get_wishlist())
